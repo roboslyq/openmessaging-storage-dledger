@@ -36,6 +36,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * 文件存储服务实现
+ */
 public class DLedgerMmapFileStore extends DLedgerStore {
 
     public static final String CHECK_POINT_FILE = "checkpoint";

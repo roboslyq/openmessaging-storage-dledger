@@ -17,6 +17,9 @@
 
 package io.openmessaging.storage.dledger.entry;
 
+/**
+ * DLedger的实体(消息)格式定义
+ */
 public class DLedgerEntry {
 
     public final static int POS_OFFSET = 4 + 4 + 8 + 8;

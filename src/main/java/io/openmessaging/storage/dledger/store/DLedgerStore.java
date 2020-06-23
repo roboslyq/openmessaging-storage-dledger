@@ -20,6 +20,9 @@ package io.openmessaging.storage.dledger.store;
 import io.openmessaging.storage.dledger.MemberState;
 import io.openmessaging.storage.dledger.entry.DLedgerEntry;
 
+/**
+ * DLedger 存储服务:有内存和文件实现两种
+ */
 public abstract class DLedgerStore {
 
     public MemberState getMemberState() {

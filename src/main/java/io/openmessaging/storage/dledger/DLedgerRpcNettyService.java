@@ -56,6 +56,7 @@ import org.slf4j.LoggerFactory;
 /**
  * A netty implementation of DLedgerRpcService. It should be bi-directional, which means it implements both
  * DLedgerProtocol and DLedgerProtocolHandler.
+ * 使用Netty实现DLedger的Rpc服务。
  */
 
 public class DLedgerRpcNettyService extends DLedgerRpcService {

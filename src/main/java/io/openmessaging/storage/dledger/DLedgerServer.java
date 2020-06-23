@@ -54,6 +54,9 @@ import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Dledger服务
+ */
 public class DLedgerServer implements DLedgerProtocolHander {
 
     private static Logger logger = LoggerFactory.getLogger(DLedgerServer.class);
@@ -85,10 +88,15 @@ public class DLedgerServer implements DLedgerProtocolHander {
 
 
     public void startup() {
+        // 存储初始化,重新load文件等
         this.dLedgerStore.startup();
+        // 服务器启动：netty
         this.dLedgerRpcService.startup();
+        // 同步服务(leader将自己的entry同步给follower)
         this.dLedgerEntryPusher.startup();
+        // leader选举服务
         this.dLedgerLeaderElector.startup();
+        // 定时任务
         executorService.scheduleAtFixedRate(this::checkPreferredLeader, 1000, 1000, TimeUnit.MILLISECONDS);
     }
 

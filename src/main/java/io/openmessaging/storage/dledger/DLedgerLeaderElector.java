@@ -39,6 +39,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * 选主服务
+ */
 public class DLedgerLeaderElector {
 
     private static Logger logger = LoggerFactory.getLogger(DLedgerLeaderElector.class);

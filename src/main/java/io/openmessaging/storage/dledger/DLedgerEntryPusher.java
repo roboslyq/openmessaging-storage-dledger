@@ -299,6 +299,7 @@ public class DLedgerEntryPusher {
     }
 
     /**
+     * leader将自己的entry同步给follower。
      * This thread will be activated by the leader.
      * This thread will push the entry to follower(identified by peerId) and update the completed pushed index to index map.
      * Should generate a single thread for each peer.

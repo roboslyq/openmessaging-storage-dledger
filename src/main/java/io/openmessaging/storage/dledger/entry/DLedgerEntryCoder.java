@@ -19,8 +19,15 @@ package io.openmessaging.storage.dledger.entry;
 
 import java.nio.ByteBuffer;
 
+/**
+ * DLedger的编码解码器
+ */
 public class DLedgerEntryCoder {
-
+    /**
+     * 编码器
+     * @param entry
+     * @param byteBuffer
+     */
     public static void encode(DLedgerEntry entry, ByteBuffer byteBuffer) {
         byteBuffer.clear();
         int size = entry.computSizeInBytes();
@@ -38,6 +45,15 @@ public class DLedgerEntryCoder {
         byteBuffer.flip();
     }
 
+    /**
+     * 解码器
+     * @param pos
+     * @param size
+     * @param magic
+     * @param index
+     * @param term
+     * @param byteBuffer
+     */
     public static void encodeIndex(long pos, int size, int magic, long index, long term, ByteBuffer byteBuffer) {
         byteBuffer.clear();
         byteBuffer.putInt(magic);
@@ -52,6 +68,12 @@ public class DLedgerEntryCoder {
         return decode(byteBuffer, true);
     }
 
+    /**
+     * 解码器
+     * @param byteBuffer
+     * @param readBody
+     * @return
+     */
     public static DLedgerEntry decode(ByteBuffer byteBuffer, boolean readBody) {
         DLedgerEntry entry = new DLedgerEntry();
         entry.setMagic(byteBuffer.getInt());

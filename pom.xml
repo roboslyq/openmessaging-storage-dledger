@@ -43,11 +43,13 @@
     </properties>
 
     <dependencies>
+        <!-- 依赖于rocketMQ的remoting 模块 -->
         <dependency>
             <groupId>org.apache.rocketmq</groupId>
             <artifactId>rocketmq-remoting</artifactId>
             <version>4.3.2</version>
         </dependency>
+        <!-- Java解析命令行参数的工具，作者是cbeust，-->
         <dependency>
             <groupId>com.beust</groupId>
             <artifactId>jcommander</artifactId>
@@ -64,6 +66,7 @@
             <version>4.11</version>
             <scope>test</scope>
         </dependency>
+        <!-- 一个针对Java的mocking框架，与EasyMock和jMock很相似。 -->
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
