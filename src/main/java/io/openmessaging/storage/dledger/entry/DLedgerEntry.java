@@ -19,21 +19,39 @@ package io.openmessaging.storage.dledger.entry;
 
 /**
  * DLedger的实体(消息)格式定义
+ * header:
+ *   4: magic 魔数
+ *   4: entrysize 大小
+ *   8: entry index
+ *   8: entry term
+ *   8: pos
+ *   4: channel
+ *   4: chain crc
+ *   4: body crc
+ *   4: body size
+ * body: 具体的body，大小为body size
  */
 public class DLedgerEntry {
-
+    /**
+     * POS的偏移量，前面4个字段分别为magic,entrysize,entryindex,entryterm
+     */
     public final static int POS_OFFSET = 4 + 4 + 8 + 8;
+    /**
+     * header大小
+     */
     public final static int HEADER_SIZE = POS_OFFSET + 8 + 4 + 4 + 4;
+    /**
+     * Body的大小偏移量
+     */
     public final static int BODY_OFFSET = HEADER_SIZE + 4;
-
     private int magic;
     private int size;
     private long index;
     private long term;
-    private long pos; //used to validate data
-    private int channel; //reserved
-    private int chainCrc; //like the block chain, this crc indicates any modification before this entry.
-    private int bodyCrc; //the crc of the body
+    private long pos;       //used to validate data
+    private int channel;    //reserved
+    private int chainCrc;   //like the block chain, this crc indicates any modification before this entry.
+    private int bodyCrc;    //the crc of the body
     private byte[] body;
 
     public int getSize() {
