@@ -21,17 +21,26 @@ import com.beust.jcommander.Parameter;
 import io.openmessaging.storage.dledger.store.file.DLedgerMmapFileStore;
 import java.io.File;
 
+/**
+ * DLedger配置
+ */
 public class DLedgerConfig {
 
     public static final String MEMORY = "MEMORY";
     public static final String FILE = "FILE";
-
+    /**
+     * 分组
+     */
     @Parameter(names = {"--group", "-g"}, description = "Group of this server")
     private String group = "default";
-
+    /**
+     * ID
+     */
     @Parameter(names = {"--id", "-i"}, description = "Self id of this server")
     private String selfId = "n0";
-
+    /**
+     *
+     */
     @Parameter(names = {"--peers", "-p"}, description = "Peer info of this server")
     private String peers = "n0-localhost:20911";
 
