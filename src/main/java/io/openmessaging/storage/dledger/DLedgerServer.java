@@ -60,17 +60,39 @@ import org.slf4j.LoggerFactory;
 public class DLedgerServer implements DLedgerProtocolHander {
 
     private static Logger logger = LoggerFactory.getLogger(DLedgerServer.class);
-
+    /**
+     * 成员状态
+     */
     private MemberState memberState;
+    /**
+     * 配置信息
+     */
     private DLedgerConfig dLedgerConfig;
-
+    /**
+     * 存储信息
+     */
     private DLedgerStore dLedgerStore;
+    /**
+     * RPC服务
+     */
     private DLedgerRpcService dLedgerRpcService;
+    /**
+     * Entry 节点同步服务：即主从复制实现
+     */
     private DLedgerEntryPusher dLedgerEntryPusher;
+    /**
+     * 节点选主服务（Leader选举）
+     */
     private DLedgerLeaderElector dLedgerLeaderElector;
-
+    /**
+     * 定时任务执行器
+     */
     private ScheduledExecutorService executorService;
 
+    /**
+     * 构造函数
+     * @param dLedgerConfig
+     */
     public DLedgerServer(DLedgerConfig dLedgerConfig) {
         this.dLedgerConfig = dLedgerConfig;
         this.memberState = new MemberState(dLedgerConfig);
@@ -86,7 +108,9 @@ public class DLedgerServer implements DLedgerProtocolHander {
         });
     }
 
-
+    /**
+     * 启动
+     */
     public void startup() {
         // 存储初始化,重新load文件等
         this.dLedgerStore.startup();
@@ -108,10 +132,17 @@ public class DLedgerServer implements DLedgerProtocolHander {
         executorService.shutdown();
     }
 
+    /**
+     * 创建存储服务器
+     * @param storeType
+     * @param config
+     * @param memberState
+     * @return
+     */
     private DLedgerStore createDLedgerStore(String storeType, DLedgerConfig config, MemberState memberState) {
-        if (storeType.equals(DLedgerConfig.MEMORY)) {
+        if (storeType.equals(DLedgerConfig.MEMORY)) {//内存存储
             return new DLedgerMemoryStore(config, memberState);
-        } else {
+        } else {//文件存储
             return new DLedgerMmapFileStore(config, memberState);
         }
     }
@@ -120,6 +151,12 @@ public class DLedgerServer implements DLedgerProtocolHander {
         return memberState;
     }
 
+    /**
+     * 心跳处理
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @Override public CompletableFuture<HeartBeatResponse> handleHeartBeat(HeartBeatRequest request) throws Exception {
         try {
 
@@ -136,6 +173,12 @@ public class DLedgerServer implements DLedgerProtocolHander {
         }
     }
 
+    /**
+     * 投票选举
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @Override public CompletableFuture<VoteResponse> handleVote(VoteRequest request) throws Exception {
         try {
             PreConditions.check(memberState.getSelfId().equals(request.getRemoteId()), DLedgerResponseCode.UNKNOWN_MEMBER, "%s != %s", request.getRemoteId(), memberState.getSelfId());
@@ -153,9 +196,9 @@ public class DLedgerServer implements DLedgerProtocolHander {
 
     /**
      * Handle the append requests:
-     * 1.append the entry to local store
-     * 2.submit the future to entry pusher and wait the quorum ack
-     * 3.if the pending requests are full, then reject it immediately
+     * 1.append the entry to local store 添加Entry到本地Store
+     * 2.submit the future to entry pusher and wait the quorum ack 提交Entry到从节点，直接大多数返回OK。
+     * 3.if the pending requests are full, then reject it immediately 如果请求超过maxPendingRequestsNum，直接返回
      *
      * @param request
      * @return
@@ -179,7 +222,9 @@ public class DLedgerServer implements DLedgerProtocolHander {
             } else {
                 DLedgerEntry dLedgerEntry = new DLedgerEntry();
                 dLedgerEntry.setBody(request.getBody());
+                // 添加Entry
                 DLedgerEntry resEntry = dLedgerStore.appendAsLeader(dLedgerEntry);
+                // 等待从节点Ack
                 return dLedgerEntryPusher.waitAck(resEntry);
             }
         } catch (DLedgerException e) {
@@ -192,6 +237,12 @@ public class DLedgerServer implements DLedgerProtocolHander {
         }
     }
 
+    /**
+     * 数据读取请求
+     * @param request
+     * @return
+     * @throws IOException
+     */
     @Override
     public CompletableFuture<GetEntriesResponse> handleGet(GetEntriesRequest request) throws IOException {
         try {
@@ -215,6 +266,12 @@ public class DLedgerServer implements DLedgerProtocolHander {
         }
     }
 
+    /**
+     * 元数据处理
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @Override public CompletableFuture<MetadataResponse> handleMetadata(MetadataRequest request) throws Exception {
         try {
             PreConditions.check(memberState.getSelfId().equals(request.getRemoteId()), DLedgerResponseCode.UNKNOWN_MEMBER, "%s != %s", request.getRemoteId(), memberState.getSelfId());
@@ -240,6 +297,12 @@ public class DLedgerServer implements DLedgerProtocolHander {
         return null;
     }
 
+    /**
+     * 主人复制处理
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @Override public CompletableFuture<PushEntryResponse> handlePush(PushEntryRequest request) throws Exception {
         try {
             PreConditions.check(memberState.getSelfId().equals(request.getRemoteId()), DLedgerResponseCode.UNKNOWN_MEMBER, "%s != %s", request.getRemoteId(), memberState.getSelfId());

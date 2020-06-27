@@ -281,6 +281,10 @@ public class MmapFileList {
         }
     }
 
+    /**
+     * 加载文件(数据文件或者索引文件)
+     * @return
+     */
     public boolean load() {
         File dir = new File(this.storePath);
         File[] files = dir.listFiles();

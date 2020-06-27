@@ -46,24 +46,49 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * 主从节点同步器：日志转发线程，当前节点为主节点时追加。
+ */
 public class DLedgerEntryPusher {
 
     private static Logger logger = LoggerFactory.getLogger(DLedgerEntryPusher.class);
-
+    /**
+     * 多副本配置相关
+     */
     private DLedgerConfig dLedgerConfig;
+    /**
+     * 存储实现
+     */
     private DLedgerStore dLedgerStore;
-
-    private final MemberState memberState;
-
+    /**
+     * 节点状态机
+     */
+        private final MemberState memberState;
+    /**
+     * RPC 服务实现类，用于集群内的其他节点进行网络通讯。
+     */
     private DLedgerRpcService dLedgerRpcService;
-
+    /**
+     * 每个节点基于投票轮次的当前水位线标记。
+     * 键值为投票轮次，值为 ConcurrentMap< 节点id : Long 节点对应的日志序号>。
+     */
     private Map<Long, ConcurrentMap<String, Long>> peerWaterMarksByTerm = new ConcurrentHashMap<>();
+    /**
+     * 用于存放追加请求的响应结果(Future模式)。
+     */
     private Map<Long, ConcurrentMap<Long, TimeoutFuture<AppendEntryResponse>>> pendingAppendResponsesByTerm = new ConcurrentHashMap<>();
-
+    /**
+     * 对应一个线程:日志接收处理线程，当节点为从节点时激活。
+     */
     private EntryHandler entryHandler = new EntryHandler(logger);
-
+    /**
+     * 对应一个线程:日志追加ACK投票处理线程，当前节点为主节点时激活。
+     * Quorum:法定人数
+     */
     private QuorumAckChecker quorumAckChecker = new QuorumAckChecker(logger);
-
+    /**
+     * EntryDispatcher日志转发线程，当前节点为主节点时追加。
+     */
     private Map<String, EntryDispatcher> dispatcherMap = new HashMap<>();
 
     public DLedgerEntryPusher(DLedgerConfig dLedgerConfig, MemberState memberState, DLedgerStore dLedgerStore,
@@ -72,6 +97,7 @@ public class DLedgerEntryPusher {
         this.memberState = memberState;
         this.dLedgerStore = dLedgerStore;
         this.dLedgerRpcService = dLedgerRpcService;
+        // 根据集群内的节点，依次构建对应的 EntryDispatcher 对象。?? TODO 为什么这么设计，一个节点一个Dispatcher对象？？？
         for (String peer : memberState.getPeerMap().keySet()) {
             if (!peer.equals(memberState.getSelfId())) {
                 dispatcherMap.put(peer, new EntryDispatcher(peer, logger));
@@ -135,9 +161,15 @@ public class DLedgerEntryPusher {
 
     public boolean isPendingFull(long currTerm) {
         checkTermForPendingMap(currTerm, "isPendingFull");
+        // 当前等待从节点返回结果的个数是否超过其最大请求数量
         return pendingAppendResponsesByTerm.get(currTerm).size() > dLedgerConfig.getMaxPendingRequestsNum();
     }
 
+    /**
+     * 发送Entry到从节点中
+     * @param entry
+     * @return
+     */
     public CompletableFuture<AppendEntryResponse> waitAck(DLedgerEntry entry) {
         updatePeerWaterMark(entry.getTerm(), memberState.getSelfId(), entry.getIndex());
         if (memberState.getPeerMap().size() == 1) {
@@ -168,6 +200,7 @@ public class DLedgerEntryPusher {
 
     /**
      * This thread will check the quorum index and complete the pending requests.
+     * 日志复制投票器，一个日志写请求只有得到集群内的的大多数节点的响应，日志才会被提交
      */
     private class QuorumAckChecker extends ShutdownAbleThread {
 

@@ -21,9 +21,17 @@ import io.openmessaging.storage.dledger.protocol.DLedgerClientProtocol;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Rpc客户端
+ */
 public abstract class DLedgerClientRpcService implements DLedgerClientProtocol {
+    // 集群中其它节点
     private Map<String, String> peerMap = new ConcurrentHashMap<>();
 
+    /**
+     * 更新peers
+     * @param peers
+     */
     public void updatePeers(String peers) {
         for (String peerInfo : peers.split(";")) {
             peerMap.put(peerInfo.split("-")[0], peerInfo.split("-")[1]);

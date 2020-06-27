@@ -83,6 +83,7 @@ public class LeaderElectorTest extends ServerTestHarness {
                 }
             }).get().getMemberState().currTerm();
             DLedgerServer candidate = servers.get(i % servers.size());
+            // 开始新的一轮投票，投票基数为当前期数MaxTerm + 1
             candidate.getdLedgerLeaderElector().testRevote(maxTerm + 1);
             Thread.sleep(100);
             leaderNum.set(0);

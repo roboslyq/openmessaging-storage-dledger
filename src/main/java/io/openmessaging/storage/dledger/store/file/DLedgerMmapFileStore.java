@@ -109,20 +109,28 @@ public class DLedgerMmapFileStore extends DLedgerStore {
         this.indexFileList.flush(0);
     }
 
+    /**
+     * 初始化加载文件
+     */
     public void load() {
         if (!hasLoaded.compareAndSet(false, true)) {
             return;
         }
+        // 加载数据文件和索引文件
         if (!this.dataFileList.load() || !this.indexFileList.load()) {
             logger.error("Load file failed, this usually indicates fatal error, you should check it manually");
             System.exit(-1);
         }
     }
 
+    /**
+     * 对数据文件进行恢复
+     */
     public void recover() {
         if (!hasRecovered.compareAndSet(false, true)) {
             return;
         }
+        // 检查数据文件和索引文件是否正常
         PreConditions.check(dataFileList.checkSelf(), DLedgerResponseCode.DISK_ERROR, "check data file order failed before recovery");
         PreConditions.check(indexFileList.checkSelf(), DLedgerResponseCode.DISK_ERROR, "check index file order failed before recovery");
         final List<MmapFile> mappedFiles = this.dataFileList.getMappedFiles();
@@ -323,6 +331,11 @@ public class DLedgerMmapFileStore extends DLedgerStore {
 
     }
 
+    /**
+     * 在Leader中添加Entry（写入文件）
+     * @param entry
+     * @return
+     */
     @Override
     public DLedgerEntry appendAsLeader(DLedgerEntry entry) {
         PreConditions.check(memberState.isLeader(), DLedgerResponseCode.NOT_LEADER);
@@ -343,6 +356,7 @@ public class DLedgerMmapFileStore extends DLedgerStore {
             entry.setPos(prePos);
             PreConditions.check(prePos != -1, DLedgerResponseCode.DISK_ERROR, null);
             DLedgerEntryCoder.setPos(dataBuffer, prePos);
+            // 调用钩子函数，供其它应该扩展
             for (AppendHook writeHook : appendHooks) {
                 writeHook.doHook(entry, dataBuffer.slice(), DLedgerEntry.BODY_OFFSET);
             }

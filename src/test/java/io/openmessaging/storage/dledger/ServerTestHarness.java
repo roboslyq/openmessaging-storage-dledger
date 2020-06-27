@@ -106,6 +106,13 @@ public class ServerTestHarness extends ServerTestBase {
         return dLedgerClient;
     }
 
+    /**
+     * 获取LeaderServer
+     * @param servers
+     * @param leaderNum
+     * @param followerNum
+     * @return
+     */
     protected DLedgerServer parseServers(List<DLedgerServer> servers, AtomicInteger leaderNum,
         AtomicInteger followerNum) {
         DLedgerServer leaderServer = null;

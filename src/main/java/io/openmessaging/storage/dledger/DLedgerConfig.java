@@ -22,28 +22,35 @@ import io.openmessaging.storage.dledger.store.file.DLedgerMmapFileStore;
 import java.io.File;
 
 /**
- * DLedger配置
+ * 1、DLedger配置: 默认是为RocketMQ提供实现，所以很多配置项与RocketMQ保持一致。
+ * 2、DLedger无缝的整合RocketMQ主要体现在以下三个方面：
+ *  (1)启动时，对CommitLog进行相关的恢复
+ *  (2)消息追加PutMessage时，
+ *  (3)消息读取
  */
 public class DLedgerConfig {
 
     public static final String MEMORY = "MEMORY";
     public static final String FILE = "FILE";
     /**
-     * 分组
+     * 分组:如果与RocketMQ整合，建议与 broker 配置属性 brokerName 保持一致。
      */
     @Parameter(names = {"--group", "-g"}, description = "Group of this server")
     private String group = "default";
     /**
-     * ID
+     *  leader 节点的 id 名称，示例配置：n0，其配置要求第二个字符后必须是数字。
      */
     @Parameter(names = {"--id", "-i"}, description = "Self id of this server")
     private String selfId = "n0";
     /**
-     *
+     * DLeger Group 中所有的节点信息，其配置示例 n0-127.0.0.1:40911;n1-127.0.0.1:40912;n2-127.0.0.1:40913。
+     * 多个节点使用分号隔开。
      */
     @Parameter(names = {"--peers", "-p"}, description = "Peer info of this server")
     private String peers = "n0-localhost:20911";
-
+    /**
+     * 设置 DLedger 的日志文件的根目录，取自 borker 配件文件中的 storePathRootDir ，即 RocketMQ 的数据存储根路径。
+     */
     @Parameter(names = {"--store-base-dir", "-s"}, description = "The base store dir of this server")
     private String storeBaseDir = File.separator + "tmp" + File.separator + "dledgerstore";
 
@@ -53,40 +60,79 @@ public class DLedgerConfig {
 
     @Parameter(names = {"--peer-push-quotas"}, description = "The quotas of the pusher")
     private int peerPushQuota = 20 * 1024 * 1024;
-
+    /**
+     * DLedger 存储类型，固定为 基于文件的存储模式。
+     */
     private String storeType = FILE; //FILE, MEMORY
+    /**
+     * 文件存储路径
+     */
     private String dataStorePath;
-
+    /**
+     * 最大并发量
+     */
     private int maxPendingRequestsNum = 10000;
-
+    /**
+     * 等待集群中其它节点ack最大毫秒数，超过当前值即超时
+     */
     private int maxWaitAckTimeMs = 2500;
 
     private int maxPushTimeOutMs = 1000;
-
+    /**
+     * 是否开始自动选主
+     */
     private boolean enableLeaderElector = true;
-
+    /**
+     * 心跳间隔
+     */
     private int heartBeatTimeIntervalMs = 2000;
-
+    /**
+     * 心跳最大失败次数
+     */
     private int maxHeartBeatLeak = 3;
-
+    /**
+     * 最小投票间隔
+     */
     private int minVoteIntervalMs = 300;
+    /**
+     * 最大投票间隔
+     */
     private int maxVoteIntervalMs = 1000;
-
+    /**
+     *  DLedger 日志文件保留时长，取自 broker 配置文件中的 fileReservedHours，默认为 72h。
+     */
     private int fileReservedHours = 72;
+    /**
+     *  DLedger 日志文件的删除时间，取自 broker 配置文件中的 deleteWhen，默认为凌晨 4点。
+     */
     private String deleteWhen = "04";
 
     private float diskSpaceRatioToCheckExpired = Float.parseFloat(System.getProperty("dledger.disk.ratio.check", "0.70"));
     private float diskSpaceRatioToForceClean = Float.parseFloat(System.getProperty("dledger.disk.ratio.clean", "0.85"));
-
+    /**
+     * 是否开启强制删除文件功能：默认为true
+     */
     private boolean enableDiskForceClean = true;
-
+    /**
+     * 文件刷盘周期
+     */
     private long flushFileInterval = 10;
-
+    /**
+     * TODO
+     */
     private long checkPointInterval = 3000;
-
+    /**
+     * 设置 DLedger 的单个日志文件的大小，取自 broker 配置文件中的 - mapedFileSizeCommitLog，即与 commitlog 文件的单个文件大小一致。
+     * 默认是1G
+     */
     private int mappedFileSizeForEntryData = 1024 * 1024 * 1024;
+    /**
+     * 索引 文件大小
+     */
     private int mappedFileSizeForEntryIndex = DLedgerMmapFileStore.INDEX_UNIT_SIZE * 5 * 1024 * 1024;
-
+    /**
+     * 是否将Entry推送到follwer(主从同步)
+     */
     private boolean enablePushToFollower = true;
 
     @Parameter(names = {"--preferred-leader-id"}, description = "Preferred LeaderId")

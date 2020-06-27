@@ -81,6 +81,9 @@ public class DLedgerLeaderElector {
         refreshIntervals(dLedgerConfig);
     }
 
+    /**
+     * 选主服务启动
+     */
     public void startup() {
         stateMaintainer.start();
         for (RoleChangeHandler roleChangeHandler : roleChangeHandlers) {
@@ -102,18 +105,24 @@ public class DLedgerLeaderElector {
         this.maxVoteIntervalMs = dLedgerConfig.getMaxVoteIntervalMs();
     }
 
+    /**
+     * 心跳处理
+     * @param request
+     * @return
+     * @throws Exception
+     */
     public CompletableFuture<HeartBeatResponse> handleHeartBeat(HeartBeatRequest request) throws Exception {
-
+        // 如果不是peer节点，则直接抛出异常
         if (!memberState.isPeerMember(request.getLeaderId())) {
             logger.warn("[BUG] [HandleHeartBeat] remoteId={} is an unknown member", request.getLeaderId());
             return CompletableFuture.completedFuture(new HeartBeatResponse().term(memberState.currTerm()).code(DLedgerResponseCode.UNKNOWN_MEMBER.getCode()));
         }
-
+        // 如果是Leader，则不处理
         if (memberState.getSelfId().equals(request.getLeaderId())) {
             logger.warn("[BUG] [HandleHeartBeat] selfId={} but remoteId={}", memberState.getSelfId(), request.getLeaderId());
             return CompletableFuture.completedFuture(new HeartBeatResponse().term(memberState.currTerm()).code(DLedgerResponseCode.UNEXPECTED_MEMBER.getCode()));
         }
-
+        // TODO 如果
         if (request.getTerm() < memberState.currTerm()) {
             return CompletableFuture.completedFuture(new HeartBeatResponse().term(memberState.currTerm()).code(DLedgerResponseCode.EXPIRED_TERM.getCode()));
         } else if (request.getTerm() == memberState.currTerm()) {
@@ -164,6 +173,10 @@ public class DLedgerLeaderElector {
         }
     }
 
+    /**
+     * 准备开发投票，角色切换为候选人
+     * @param term
+     */
     public void changeRoleToCandidate(long term) {
         synchronized (memberState) {
             if (term >= memberState.currTerm()) {
@@ -323,6 +336,10 @@ public class DLedgerLeaderElector {
         }
     }
 
+    /**
+     * Leader维护
+     * @throws Exception
+     */
     private void maintainAsLeader() throws Exception {
         if (DLedgerUtils.elapsed(lastSendHeartBeatTime) > heartBeatTimeIntervalMs) {
             long term;
@@ -336,11 +353,16 @@ public class DLedgerLeaderElector {
                 leaderId = memberState.getLeaderId();
                 lastSendHeartBeatTime = System.currentTimeMillis();
             }
+            // 发送心跳
             sendHeartbeats(term, leaderId);
         }
     }
 
+    /**
+     * follower维护
+     */
     private void maintainAsFollower() {
+        // 如果超过maxHeartBeatLeak没有收到Leader心跳，开始发起新的一轮投票
         if (DLedgerUtils.elapsed(lastLeaderHeartBeatTime) > 2 * heartBeatTimeIntervalMs) {
             synchronized (memberState) {
                 if (memberState.isFollower() && (DLedgerUtils.elapsed(lastLeaderHeartBeatTime) > maxHeartBeatLeak * heartBeatTimeIntervalMs)) {
@@ -526,10 +548,11 @@ public class DLedgerLeaderElector {
      * The core method of maintainer. Run the specified logic according to the current role: candidate => propose a
      * vote. leader => send heartbeats to followers, and step down to candidate when quorum followers do not respond.
      * follower => accept heartbeats, and change to candidate when no heartbeat from leader.
-     *
+     * 选主
      * @throws Exception
      */
     private void maintainState() throws Exception {
+        // 对Leader ,follower和candidate三种不同角色处理
         if (memberState.isLeader()) {
             maintainAsLeader();
         } else if (memberState.isFollower()) {
@@ -685,6 +708,9 @@ public class DLedgerLeaderElector {
         void shutdown();
     }
 
+    /**
+     * 选主服务具体实现
+     */
     public class StateMaintainer extends ShutdownAbleThread {
 
         public StateMaintainer(String name, Logger logger) {
@@ -693,8 +719,11 @@ public class DLedgerLeaderElector {
 
         @Override public void doWork() {
             try {
+                // 前提是开启选主
                 if (DLedgerLeaderElector.this.dLedgerConfig.isEnableLeaderElector()) {
+                    // 刷亲配置
                     DLedgerLeaderElector.this.refreshIntervals(dLedgerConfig);
+                    // 开始选主(维护状态)
                     DLedgerLeaderElector.this.maintainState();
                 }
                 sleep(10);

@@ -49,6 +49,9 @@ public class MemberState {
     private final String peers;
     private volatile Role role = CANDIDATE;
     private volatile String leaderId;
+    /**
+     * 当前选主期数
+     */
     private volatile long currTerm = 0;
     private volatile String currVoteFor;
     private volatile long ledgerEndIndex = -1;
