@@ -115,9 +115,16 @@ public class DLedgerRpcNettyService extends DLedgerRpcService {
         return memberState.getPeerAddr(request.getRemoteId());
     }
 
+    /**
+     * 发送心跳包
+     * @param request
+     * @return
+     * @throws Exception
+     */
     @Override public CompletableFuture<HeartBeatResponse> heartBeat(HeartBeatRequest request) throws Exception {
         CompletableFuture<HeartBeatResponse> future = new CompletableFuture<>();
         try {
+            // 借助于RocketMq的Remoting模块发送指令
             RemotingCommand wrapperRequest = RemotingCommand.createRequestCommand(DLedgerRequestCode.HEART_BEAT.getCode(), null);
             wrapperRequest.setBody(JSON.toJSONBytes(request));
             remotingClient.invokeAsync(getPeerAddr(request), wrapperRequest, 3000, responseFuture -> {

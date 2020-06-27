@@ -81,6 +81,9 @@ public abstract class ShutdownAbleThread extends Thread {
         }
     }
 
+    /**
+     * 任务一直进行
+     */
     public void run() {
         while (running.get()) {
             try {

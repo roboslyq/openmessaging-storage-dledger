@@ -109,7 +109,7 @@ public class DLedgerServer implements DLedgerProtocolHander {
     }
 
     /**
-     * 启动
+     * ===>启动DLedger服务 ，总入口
      */
     public void startup() {
         // 存储初始化,重新load文件等

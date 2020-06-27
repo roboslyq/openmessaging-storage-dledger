@@ -37,9 +37,11 @@ import static io.openmessaging.storage.dledger.MemberState.Role.LEADER;
  * 成员状态机
  */
 public class MemberState {
-
+    // 当前选主期数文件名称
     public static final String TERM_PERSIST_FILE = "currterm";
+    // 当前选主期数在文件中的Key
     public static final String TERM_PERSIST_KEY_TERM = "currTerm";
+    // 记录对应Leader的投票信息
     public static final String TERM_PERSIST_KEY_VOTE_FOR = "voteLeader";
     public static Logger logger = LoggerFactory.getLogger(MemberState.class);
     public final DLedgerConfig dLedgerConfig;
@@ -47,6 +49,9 @@ public class MemberState {
     private final String group;
     private final String selfId;
     private final String peers;
+    /**
+     * role的默认值是CandiDate，因此系统启动之后会主动发起选举投票
+     */
     private volatile Role role = CANDIDATE;
     private volatile String leaderId;
     /**
@@ -63,19 +68,28 @@ public class MemberState {
     private volatile String transferee;
     private volatile long termToTakeLeadership = -1;
 
+    /**
+     * 创建节点状态机
+     * @param config
+     */
     public MemberState(DLedgerConfig config) {
         this.group = config.getGroup();
         this.selfId = config.getSelfId();
         this.peers = config.getPeers();
+        // 初始化节点中所有成员
         for (String peerInfo : this.peers.split(";")) {
             String peerSelfId = peerInfo.split("-")[0];
             String peerAddress = peerInfo.substring(selfId.length() + 1);
             peerMap.put(peerSelfId, peerAddress);
         }
         this.dLedgerConfig = config;
+        // 初始化选举期数
         loadTerm();
     }
 
+    /**
+     * 初始化选举期数
+     */
     private void loadTerm() {
         try {
             String data = IOUtils.file2String(dLedgerConfig.getDefaultPath() + File.separator + TERM_PERSIST_FILE);
@@ -97,6 +111,9 @@ public class MemberState {
         }
     }
 
+    /**
+     * 持久化Term信息
+     */
     private void persistTerm() {
         try {
             Properties properties = new Properties();
@@ -122,6 +139,10 @@ public class MemberState {
         persistTerm();
     }
 
+    /**
+     * 获取一下个Term
+     * @return
+     */
     public synchronized long nextTerm() {
         PreConditions.check(role == CANDIDATE, DLedgerResponseCode.ILLEGAL_MEMBER_STATE, "%s != %s", role, CANDIDATE);
         if (knownMaxTermInGroup > currTerm) {
