@@ -77,7 +77,9 @@ public class DLedgerMmapFileStore extends DLedgerStore {
         this.indexFileList = new MmapFileList(dLedgerConfig.getIndexStorePath(), dLedgerConfig.getMappedFileSizeForEntryIndex());
         localEntryBuffer = ThreadLocal.withInitial(() -> ByteBuffer.allocate(4 * 1024 * 1024));
         localIndexBuffer = ThreadLocal.withInitial(() -> ByteBuffer.allocate(INDEX_UNIT_SIZE * 2));
+        // 数据持久化定时任务
         flushDataService = new FlushDataService("DLedgerFlushDataService", logger);
+        // 空间清理定时任务
         cleanSpaceService = new CleanSpaceService("DLedgerCleanSpaceService", logger);
     }
 
@@ -342,6 +344,7 @@ public class DLedgerMmapFileStore extends DLedgerStore {
         PreConditions.check(!isDiskFull, DLedgerResponseCode.DISK_FULL);
         ByteBuffer dataBuffer = localEntryBuffer.get();
         ByteBuffer indexBuffer = localIndexBuffer.get();
+        // 对数据进行编码(转换为字节码)
         DLedgerEntryCoder.encode(entry, dataBuffer);
         int entrySize = dataBuffer.remaining();
         synchronized (memberState) {
@@ -352,6 +355,7 @@ public class DLedgerMmapFileStore extends DLedgerStore {
             entry.setTerm(memberState.currTerm());
             entry.setMagic(CURRENT_MAGIC);
             DLedgerEntryCoder.setIndexTerm(dataBuffer, nextIndex, memberState.currTerm(), CURRENT_MAGIC);
+            // 预追加文件
             long prePos = dataFileList.preAppend(dataBuffer.remaining());
             entry.setPos(prePos);
             PreConditions.check(prePos != -1, DLedgerResponseCode.DISK_ERROR, null);
@@ -360,6 +364,7 @@ public class DLedgerMmapFileStore extends DLedgerStore {
             for (AppendHook writeHook : appendHooks) {
                 writeHook.doHook(entry, dataBuffer.slice(), DLedgerEntry.BODY_OFFSET);
             }
+            // 追加文件
             long dataPos = dataFileList.append(dataBuffer.array(), 0, dataBuffer.remaining());
             PreConditions.check(dataPos != -1, DLedgerResponseCode.DISK_ERROR, null);
             PreConditions.check(dataPos == prePos, DLedgerResponseCode.DISK_ERROR, null);
@@ -462,6 +467,13 @@ public class DLedgerMmapFileStore extends DLedgerStore {
         return mappedFileList.getFlushedWhere();
     }
 
+    /**
+     * Follower节点接收Leader的主从复制数据
+     * @param entry
+     * @param leaderTerm
+     * @param leaderId
+     * @return
+     */
     @Override
     public DLedgerEntry appendAsFollower(DLedgerEntry entry, long leaderTerm, String leaderId) {
         PreConditions.check(memberState.isFollower(), DLedgerResponseCode.NOT_FOLLOWER, "role=%s", memberState.getRole());
@@ -614,6 +626,9 @@ public class DLedgerMmapFileStore extends DLedgerStore {
         this.flushDataService.shutdown();
     }
 
+    /**
+     * 刷新文件定时任务
+     */
     class FlushDataService extends ShutdownAbleThread {
 
         public FlushDataService(String name, Logger logger) {
@@ -642,6 +657,9 @@ public class DLedgerMmapFileStore extends DLedgerStore {
         }
     }
 
+    /**
+     * 清理空间定时任务
+     */
     class CleanSpaceService extends ShutdownAbleThread {
 
         double storeBaseRatio = DLedgerUtils.getDiskPartitionSpaceUsedPercent(dLedgerConfig.getStoreBaseDir());

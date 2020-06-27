@@ -35,11 +35,23 @@ import org.slf4j.LoggerFactory;
 public class DLedgerMemoryStore extends DLedgerStore {
 
     private static Logger logger = LoggerFactory.getLogger(DLedgerMemoryStore.class);
-
+    /**
+     * 起始索引
+     */
     private long ledgerBeginIndex = -1;
+    /**
+     * 结束索引，每存储一个新的DLedgerEntry,此什就会+1
+     */
     private long ledgerEndIndex = -1;
+    /**
+     * 已经提交确认的索引
+     */
     private long committedIndex = -1;
+    /**
+     * 当前Term
+     */
     private long ledgerEndTerm;
+    // 使用Map作为存储容器，其中Key为具体的索引偏移量
     private Map<Long, DLedgerEntry> cachedEntries = new ConcurrentHashMap<>();
 
     private DLedgerConfig dLedgerConfig;
@@ -50,6 +62,11 @@ public class DLedgerMemoryStore extends DLedgerStore {
         this.memberState = memberState;
     }
 
+    /**
+     * Leader节点，接收客户端的写入请求
+     * @param entry
+     * @return
+     */
     @Override
     public DLedgerEntry appendAsLeader(DLedgerEntry entry) {
         PreConditions.check(memberState.isLeader(), DLedgerResponseCode.NOT_LEADER);
@@ -64,6 +81,7 @@ public class DLedgerMemoryStore extends DLedgerStore {
             if (logger.isDebugEnabled()) {
                 logger.debug("[{}] Append as Leader {} {}", memberState.getSelfId(), entry.getIndex(), entry.getBody().length);
             }
+            // 使用index作为key
             cachedEntries.put(entry.getIndex(), entry);
             if (ledgerBeginIndex == -1) {
                 ledgerBeginIndex = ledgerEndIndex;
@@ -78,6 +96,13 @@ public class DLedgerMemoryStore extends DLedgerStore {
         return appendAsFollower(entry, leaderTerm, leaderId).getIndex();
     }
 
+    /**
+     * Follower客户羰，接收Leader的同步复制复制请求
+     * @param entry
+     * @param leaderTerm
+     * @param leaderId
+     * @return
+     */
     @Override
     public DLedgerEntry appendAsFollower(DLedgerEntry entry, long leaderTerm, String leaderId) {
         PreConditions.check(memberState.isFollower(), DLedgerResponseCode.NOT_FOLLOWER);

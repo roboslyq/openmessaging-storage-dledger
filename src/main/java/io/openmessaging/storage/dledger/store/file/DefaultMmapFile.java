@@ -173,7 +173,7 @@ public class DefaultMmapFile extends ReferenceResource implements MmapFile {
 
     /**
      * Content of data from offset to offset + length will be wrote to file.
-     *
+     * 追加消息
      * @param offset The offset of the subarray to be used.
      * @param length The length of the subarray to be used.
      */

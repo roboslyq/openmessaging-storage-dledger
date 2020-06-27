@@ -227,12 +227,23 @@ public class MmapFileList {
 
     }
 
+    /**
+     * MappedFile追加消息
+     * @param data
+     * @param pos
+     * @param len
+     * @param useBlank
+     * @return
+     */
     public long append(byte[] data, int pos, int len, boolean useBlank) {
         if (preAppend(len, useBlank) == -1) {
             return -1;
         }
+        // 获取当前在使用的MappedFile
         MmapFile mappedFile = getLastMappedFile();
+        // 获取当前偏移量
         long currPosition = mappedFile.getFileFromOffset() + mappedFile.getWrotePosition();
+        // 追加消息
         if (!mappedFile.appendMessage(data, pos, len)) {
             logger.error("Append error for {}", storePath);
             return -1;
